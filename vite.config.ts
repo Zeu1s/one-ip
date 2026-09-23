@@ -62,6 +62,12 @@ export default defineConfig(() => {
     define: {
       "import.meta.env.VITE_BUILD_TIME": JSON.stringify(buildTime),
     },
+    // iOS 16.3 ships Safari 16.3, which cannot parse class static blocks.
+    // Without an explicit target the entry chunk kept `static {}` and the
+    // whole SPA failed to parse, leaving a blank page on those devices.
+    build: {
+      target: ["es2019", "safari15", "chrome100", "firefox100", "edge100"],
+    },
     server: {
       host: "127.0.0.1",
       port: 5137,
