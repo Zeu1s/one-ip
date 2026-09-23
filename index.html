@@ -41,6 +41,36 @@
       }
     })();
   </script>
+  <script>
+    // ES2022/2023 runtime APIs that Vite's build.target cannot downlevel, missing
+    // on iOS 16.3 (Safari 16.3): throwIfAborted and replaceAll are 16.4, any is 17.4.
+    (function () {
+      var define = function (target, name, value) {
+        if (!target[name]) Object.defineProperty(target, name, { writable: true, configurable: true, value: value });
+      };
+      var reasonOf = function (signal) {
+        return signal.reason || new DOMException("Aborted", "AbortError");
+      };
+      define(AbortSignal.prototype, "throwIfAborted", function () {
+        if (this.aborted) throw reasonOf(this);
+      });
+      define(AbortSignal, "any", function (signals) {
+        var controller = new AbortController();
+        Array.prototype.slice.call(signals || []).forEach(function (signal) {
+          if (!signal) return;
+          if (signal.aborted) { controller.abort(reasonOf(signal)); return; }
+          signal.addEventListener("abort", function () { controller.abort(reasonOf(signal)); }, { once: true });
+        });
+        return controller.signal;
+      });
+      define(String.prototype, "replaceAll", function (search, replacement) {
+        var pattern = search instanceof RegExp
+          ? (search.global ? search : new RegExp(search.source, search.flags + "g"))
+          : new RegExp(String(search).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g");
+        return this.replace(pattern, replacement);
+      });
+    })();
+  </script>
   <style>
     html {
       touch-action: manipulation;
